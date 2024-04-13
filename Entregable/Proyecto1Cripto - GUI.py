@@ -298,7 +298,7 @@ def receive_message():
             # Verificar si el mensaje es un mensaje regular
             elif 'message' in received_data:
                 received_message_base64 = received_data['message']
-                received_message = base64.b64decode(received_message_base64).decode('utf-8')
+                received_message = base64.b64decode(received_message_base64).decode('latin-1')
                 print("Received Message from THE SENDER (Base64):", received_message_base64)
                 print("Received Message from THE SENDER (Decoded):", received_message)
                 # Mostrar mensaje en la interfaz de usuario o realizar otras acciones
