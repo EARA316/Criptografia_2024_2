@@ -154,7 +154,7 @@ def receive_message():
     
     while True:
         received_data = receive_message_from_server()
-        if received_data:
+        if 'message' in received_data:
             print("Mensaje recibido:", received_data)
             
             # Mostrar el mensaje recibido en la interfaz de usuario o realizar otras acciones
@@ -292,7 +292,7 @@ def receive_message():
             # Verificar si el mensaje es un secreto
             if 'secret' in received_data:
                 received_secret = received_data['secret']
-                print("Received Secret:", received_secret)
+                print("Received Secret from THE SENDER:", received_secret)
                 # Realizar acciones necesarias con el secreto recibido
                 
             # Verificar si el mensaje es un mensaje regular
@@ -303,8 +303,17 @@ def receive_message():
                 print("Received Message from THE SENDER (Decoded):", received_message)
                 # Mostrar mensaje en la interfaz de usuario o realizar otras acciones
 
+            # Verificar si el mensaje es una llave pública
+            elif 'public_key' in received_data:
+                received_public_key_base64 = received_data['public_key']
+                received_public_key = base64.b64decode(received_public_key_base64).decode('latin-1')
+                print("Received Public Key from THE SENDER (Base64):", received_public_key_base64)
+                print("Received Public Key from THE SENDER (Decoded):", received_public_key)
+                # Mostrar llave pública en la interfaz de usuario o realizar otras acciones
+
             else:
-                print("Unknown message format")
+                print("Unknown message format RECEIVED")
+
 
 
 # Función para mostrar el mensaje enviado en la GUI
@@ -440,6 +449,8 @@ def encrypt_and_send_message():
     decrypted_message = symmetric_decrypt(encrypted_message, nonce, tag, decrypted_symmetric_key)
     signature_verified = verify_digital_signature(message, signature, public_key)
 
+    print("")
+    print("")
     print("\n Original Message:", message)
     print("Encrypted Message:", encrypted_message)
     print("Decrypted Message:", decrypted_message)
