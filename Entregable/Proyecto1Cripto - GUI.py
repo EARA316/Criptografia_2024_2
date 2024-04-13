@@ -147,8 +147,24 @@ def send_message(message):
     
     client_socket.sendall(message.encode())
 
-# Función para recibir mensajes del servidor
+
+# Función para procesar mensajes recibidos [RECEPTOR]
 def receive_message():
+    global client_socket
+    
+    while True:
+        received_data = receive_message_from_server()
+        if received_data:
+            print("Mensaje recibido:", received_data)
+            
+            # Mostrar el mensaje recibido en la interfaz de usuario o realizar otras acciones
+            display_received_message(received_data)
+
+
+
+
+# Función para recibir mensajes del servidor
+def process_quality_confirmation_message():
     global client_socket
     
     while True:
@@ -163,10 +179,10 @@ def receive_message():
                 print("Digital Signature Verified for Received Message")
                 received_message = json.loads(received_message)
                 decrypted_message = received_message['message']
-                print("Decrypted Received Message:", decrypted_message)
+                print("Decrypted Received Message from true:", decrypted_message)
                 received_messages_text.insert(tk.END, f"Server: {decrypted_message}\n")
             else:
-                print("Digital Signature Verification Failed for Received Message")
+                print("Digital Signature Verification Failed for Message [ALERT: THE ELEMENT HAS BEEN COMPROMISED]")
 
 # Función para recibir mensajes desde el servidor
 def receive_message_from_server():
@@ -272,18 +288,24 @@ def receive_message():
         received_data = receive_message_from_server()
         if received_data:
             received_data = json.loads(received_data)
-            received_message = received_data['message']
-            received_signature = base64.b64decode(received_data['signature'])
-            print("Received Message:", received_message)
+            
+            # Verificar si el mensaje es un secreto
+            if 'secret' in received_data:
+                received_secret = received_data['secret']
+                print("Received Secret:", received_secret)
+                # Realizar acciones necesarias con el secreto recibido
+                
+            # Verificar si el mensaje es un mensaje regular
+            elif 'message' in received_data:
+                received_message_base64 = received_data['message']
+                received_message = base64.b64decode(received_message_base64).decode('utf-8')
+                print("Received Message from THE SENDER (Base64):", received_message_base64)
+                print("Received Message from THE SENDER (Decoded):", received_message)
+                # Mostrar mensaje en la interfaz de usuario o realizar otras acciones
 
-            if verify_digital_signature(received_message, received_signature, PUBLIC_KEY_FILE):
-                print("Digital Signature Verified for Received Message")
-                received_message = json.loads(received_message)
-                decrypted_message = received_message['message']
-                print("Decrypted Received Message:", decrypted_message)
-                display_received_message(decrypted_message)  # Mostrar el mensaje en la GUI
             else:
-                print("Digital Signature Verification Failed for Received Message")
+                print("Unknown message format")
+
 
 # Función para mostrar el mensaje enviado en la GUI
 def display_sent_message(message):
@@ -311,17 +333,16 @@ def select_receiver_public_key_file():
 
 # Función para cifrar y enviar el secreto al seleccionar una clave pública del receptor
 def encrypt_and_send_secret():
-    global client_socket, RECEIVER_PUBLIC_KEY_FILE
+    global client_socket, RECEIVER_PUBLIC_KEY_FILE, secret_key
 
     if client_socket is None:
         messagebox.showerror("Error", "Primero debes conectarte al servidor.")
         return
-    
-    
+
     if RECEIVER_PUBLIC_KEY_FILE is None:
         messagebox.showerror("Error", "Por favor selecciona un archivo de clave pública del receptor.")
         return
-    
+
     if client_socket is None:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
@@ -330,33 +351,40 @@ def encrypt_and_send_secret():
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo conectar al servidor: {e}")
         return
-    
+
     password = password_entry.get()  # Obtener la contraseña como una cadena
     salt = b'salt'  # Define tu sal aquí o de manera dinámica según tus necesidades
-    
+
     if not password:
         tk.messagebox.showerror("Error", "Por favor ingresa una contraseña.")
         return
-    
+
     global secret_key
     secret_key = derive_symmetric_key(password, salt)
-    
+
     receiver_public_key = load_key_from_file(RECEIVER_PUBLIC_KEY_FILE)
-    
-    # Convierte el secreto a una cadena antes de cifrarlo
-    secret_message = str(secret_key)
-    encrypted_secret = asymmetric_encrypt(secret_message, receiver_public_key)
-    
+
+    # Convertir el secreto a una cadena antes de codificarlo en base64
+    secret_message = secret_key.hex()
+
+    # Codificar la cadena del secreto en base64
+    secret_message_base64 = base64.b64encode(secret_message.encode()).decode()
+
+    encrypted_secret = asymmetric_encrypt(secret_message_base64, receiver_public_key)
+
     send_message(json.dumps({
         'secret': base64.b64encode(encrypted_secret).decode()
     }))
     received_messages_text.insert(tk.END, "Secreto cifrado y enviado correctamente.\n")
-    
+
     # Mostrar la clave pública del receptor en la terminal
     print("Clave pública del receptor:", receiver_public_key.decode())
-    print("Secreto cifrado:", secret_message)
+    print("Secreto cifrado:", secret_message_base64)
     encrypted_secret_str = base64.b64encode(encrypted_secret).decode()
     print("Secreto cifrado con la clave pública del receptor:", encrypted_secret_str)
+
+
+
 
 # Función para cifrar y enviar un mensaje al servidor
 def encrypt_and_send_message():
@@ -367,6 +395,7 @@ def encrypt_and_send_message():
         try:
             client_socket.connect(('127.0.0.1', 5555))
             threading.Thread(target=receive_message).start()  # Iniciar hilo para recibir mensajes
+            threading.Thread(target=process_quality_confirmation_message).start()  # Iniciar hilo para recibir confirmaciones de calidad
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo conectar al servidor: {e}")
         return
@@ -411,7 +440,7 @@ def encrypt_and_send_message():
     decrypted_message = symmetric_decrypt(encrypted_message, nonce, tag, decrypted_symmetric_key)
     signature_verified = verify_digital_signature(message, signature, public_key)
 
-    print("Original Message:", message)
+    print("\n Original Message:", message)
     print("Encrypted Message:", encrypted_message)
     print("Decrypted Message:", decrypted_message)
     print("Message Digest:", message_digest)
@@ -427,7 +456,6 @@ def encrypt_and_send_message():
         received_messages_text.insert(tk.END, "[SISTEMA] Mensaje cifrado y enviado correctamente.\n")
     else:
         received_messages_text.insert(tk.END, "[SISTEMA] Error al cifrar y enviar el mensaje. Verifique las claves y vuelva a intentarlo.\n")
-
 
 # Función para conectar al servidor
 def connect_to_server():
@@ -447,19 +475,27 @@ def connect_to_server():
             tk.messagebox.showerror("Error", "Por favor ingresa una contraseña.")
             return
         
-
-
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             client_socket.connect(('127.0.0.1', 5555))
             threading.Thread(target=receive_message).start()  # Iniciar hilo para recibir mensajes
             messagebox.showinfo("Conexión establecida", "Conectado al servidor correctamente.")
             
-            # Mostrar la clave pública del emisor en la terminal
-            print("Clave pública del emisor:", load_key_from_file(PUBLIC_KEY_FILE).decode())
+            # Obtener la clave pública del emisor
+            public_key = load_key_from_file(PUBLIC_KEY_FILE)
+            
+            # Imprimir la clave pública del emisor en su formato original
+            print("Clave pública del emisor:", public_key.decode())
+            
+            # Codificar la clave pública del emisor en base64
+            public_key_base64 = base64.b64encode(public_key).decode()
+            
+            # Imprimir la clave pública del emisor en formato base64
+            print("Clave pública del emisor (base64):", public_key_base64)
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo conectar al servidor: {e}")
         return
+
 
 
 # Función para desconectarse del servidor
