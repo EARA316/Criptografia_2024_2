@@ -105,6 +105,11 @@ def new_msg(mensaje):
     msj = '[Emisor] '+mensaje+'\n'
     received_messages_text.insert(tk.END, msj)
 
+def cambiar_color_interfaz(valido):
+    if valido:
+        ventana.configure(bg='lightgreen')
+    else:
+        ventana.configure(bg='red')
 
 def obtenerIP():
     hostname = socket.gethostname()
@@ -220,10 +225,11 @@ def host_communication():
         system_msg('Conexión verificada. Iniciando hilo de recepción de datos...')
         send_message_button.config(state=tk.NORMAL)
         end_communication_button.config(state=tk.NORMAL)
-        cambiar_color_interfaz()
+        cambiar_color_interfaz(True)
         recibir_thread = threading.Thread(target=recibir_msg)
         recibir_thread.start()
     else:
+        cambiar_color_interfaz(False)
         system_msg('Conexión no verificada')
         cerrar_conexiones()
 
@@ -263,11 +269,12 @@ def guest_communication():
         conexion_guest.sendall("confirmado".encode())
         send_message_button.config(state=tk.NORMAL)
         end_communication_button.config(state=tk.NORMAL)
-        cambiar_color_interfaz()
+        cambiar_color_interfaz(True)
         system_msg('Conexión verificada. Iniciando hilo de recepción de datos...')
         recibir_thread = threading.Thread(target=recibir_msg)
         recibir_thread.start()
     else:
+        cambiar_color_interfaz(False)
         system_msg('Conexión no verificada')
         cerrar_conexiones()
 
@@ -283,11 +290,6 @@ def cerrar_conexiones():
     conexion.sendall(b'>>>FINALIZAR<<<')
     conexion.close()
     system_msg('Comunicación cancelada. debe reiniciar para crear una nueva conversación o unirse a una')
-
-
-def cambiar_color_interfaz():
-    ventana.configure(bg='lightgreen')
-
 
 password = ''
 temp_password = ''
