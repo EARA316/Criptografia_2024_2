@@ -135,6 +135,9 @@ def recibir_msg():
             if conexion:
                 # Recibir datos
                 crypt_msg_asym = conexion.recv(1024)
+                if crypt_msg_asym == b'>>>FINALIZAR<<<':
+                    cerrar_conexiones()
+                    break
                 print('\nCripto recibido: ',crypt_msg_asym)        
                 nonce = conexion.recv(1024)
                 print('\nNonce recibido: ',nonce)
@@ -161,7 +164,7 @@ def recibir_msg():
                 print('conexion terminada')
                 break
         except Exception as e:
-            messagebox.showerror("Error", f"Conexión perdida: {e}")  
+            messagebox.showinfo("Atención", "Conexión terminada")  
             break 
 
 def enviar_msg():
@@ -248,6 +251,7 @@ def host_communication():
         # Inicio de la comunicación
         system_msg('Conexión verificada. Iniciando hilo de recepción de datos...')
         send_message_button.config(state=tk.NORMAL)
+        end_communication_button.config(state=tk.NORMAL)
         recibir_thread = threading.Thread(target=recibir_msg)
         recibir_thread.start()
     else:
@@ -302,6 +306,7 @@ def guest_communication():
         conexion_guest.sendall("confirmado".encode())
         # Iniciar conversación
         send_message_button.config(state=tk.NORMAL)
+        end_communication_button.config(state=tk.NORMAL)
         system_msg('Conexión verificada. Iniciando hilo de recepción de datos...')
         recibir_thread = threading.Thread(target=recibir_msg)
         recibir_thread.start()
@@ -311,13 +316,17 @@ def guest_communication():
 
 def cerrar_conexiones():
     global conexion_host, conexion_guest, canal_host, canal_guest, isHost
-    system_msg('Comunicación cancelada. debe reiniciar para crear una nueva conversación o unirse a una')
-    conexion_host.close()
-    conexion_guest.close()
+    send_message_button.config(state=tk.DISABLED)
+    end_communication_button.config(state=tk.DISABLED)
     if isHost:
-        canal_host.close()
+        conexion = conexion_host
     else:
-        canal_guest.close()
+        conexion = conexion_guest
+    # Envía una bandera para finalizar la conexión en el interlocutor
+    conexion.sendall(b'>>>FINALIZAR<<<')
+    conexion.close()
+    system_msg('Comunicación cancelada. debe reiniciar para crear una nueva conversación o unirse a una')
+
 # ========================================================================================
 # Ejecución principal
 # ========================================================================================
@@ -339,7 +348,7 @@ private_key_label.grid(row=0, column=0, columnspan=3)
 
 # Entrada de mensaje
 ttk.Label(ventana, text="Mensaje:").grid(row=1, column=0, sticky=tk.W)
-message_entry = ttk.Entry(ventana)
+message_entry = ttk.Entry(ventana, width=40)
 message_entry.grid(row=1, column=1)
 
 # Botón para enviar mensaje
@@ -352,6 +361,10 @@ received_messages_text.grid(row=2, column=0, columnspan=3)
 
 # Entrada de mensajes de sistemas
 ttk.Label(ventana, text="Mensajes del sistema:").grid(row=3, column=0, sticky=tk.W)
+
+# Botón para terminar la conexión
+end_communication_button = ttk.Button(ventana,text="Terminar comunicación", state=tk.DISABLED, command=cerrar_conexiones)
+end_communication_button.grid(row=3, column=2)
 
 # Texto para mensajes del sistema
 system_messages_text = scrolledtext.ScrolledText(ventana, wrap=tk.WORD, height=10)
