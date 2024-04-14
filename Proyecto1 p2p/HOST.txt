@@ -1,0 +1,26 @@
+HOST:
+
+1. Obtener mis claves:
+	- solicitar contraseña
+	- generar clave simetrica con PBKDF
+	- generar claves asimetricas (privada y publica) con RSA o ECC
+
+2. Conocerse:
+	- Enviar mi llave publica
+	- Recibir llave publica del receptor
+	- Cifra la clave simetrica (asimetrico) con la llave publica del receptor
+	- Enviar clave simetrica cifrada
+
+3. Para enviar:
+	- Cifrar (simetrico) el mensaje con AES y clave simetrica
+	- Cifrar (asimetrico) el mensaje cifrado anterior con la llave publica de receptor (mensaje cifrado).
+	- Crear un hash con SHA-2 o SHA-3 del mensaje original
+	- Cifrar (asimetrico) el hash con mi llave privada (firma)
+	- Enviar mensaje cifrado y firma
+
+4. Para recibir:
+	- Descifrar (asimetrico) mensaje con mi clave privada
+	- Descifrar (simetrico) resultado anterior con la clave simetrica (mensaje original)
+	- Descifrar (asimetrico) firma con llave publica del remitente (hash recibido)
+	- Crear un hash con SHA-2 o SHA-3 del mensaje original
+	- Comparar hash obtenido con el hash recibido. Si es igual, el mensaje es autentico
