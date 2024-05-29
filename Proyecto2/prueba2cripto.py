@@ -1,18 +1,14 @@
 import oqs
-from pprint import pprint
 import time
 
 message = "This is the message to sign".encode()
 
-print(message)
+print("Message to sign:", message)
 
-sigalg = "SPHINCS+-SHA2-256f-simple"
+sigalg = "Dilithium5"
 
 # Create a signer instance using the specified algorithm
 signer = oqs.Signature(sigalg)
-
-print("\nSignature details:")
-pprint(signer.details)
 
 # Key generation
 start_time = time.time()
@@ -30,9 +26,15 @@ start_time = time.time()
 is_valid = verifier.verify(message, signature, signer_public_key)
 verify_time = time.time() - start_time
 
+print("\nSignature algorithm:", sigalg)
+print("Signature details:")
+print("Public key length:", signer.details["length_public_key"])
+print("Secret key length:", signer.details["length_secret_key"])
+print("Signature length:", signer.details["length_signature"])
+print("Is EUF-CMA secure?", signer.details["is_euf_cma"])
+
+print("\nKey generation time:", keygen_time, "seconds")
+print("Signing time:", sign_time, "seconds")
+print("Verification time:", verify_time, "seconds")
+
 print("\nValid signature?", is_valid)
-print(f"Key generation time: {keygen_time} seconds")
-print(f"Signing time: {sign_time} seconds")
-print(f"Verification time: {verify_time} seconds")
-#print(oqs.Signature.algorithms)
-print(oqs.get_enabled_sig_mechanisms())
