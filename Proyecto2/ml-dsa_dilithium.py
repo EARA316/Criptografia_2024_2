@@ -1,5 +1,9 @@
 import oqs
 import time
+import resource
+
+# Obtención del uso de memoria antes de ejecutar el código
+before_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 message = "This is the message to sign".encode()
 
@@ -26,6 +30,12 @@ start_time = time.time()
 is_valid = verifier.verify(message, signature, signer_public_key)
 verify_time = time.time() - start_time
 
+# Obtención del uso de memoria después de ejecutar el código
+after_memory = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+
+# Cálculo del uso de memoria
+memory_usage = after_memory - before_memory
+
 print("\nSignature algorithm:", sigalg)
 print("Signature details:")
 print("Public key length:", signer.details["length_public_key"])
@@ -38,3 +48,4 @@ print("Signing time:", sign_time, "seconds")
 print("Verification time:", verify_time, "seconds")
 
 print("\nValid signature?", is_valid)
+print("Uso de memoria:", memory_usage, "bytes")
